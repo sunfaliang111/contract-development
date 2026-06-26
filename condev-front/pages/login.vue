@@ -42,7 +42,7 @@ const submit = async () => {
     if (process.client) {
       localStorage.setItem('accessToken', data.accessToken)
     }
-    await navigateTo('/customers')
+    await navigateTo('/home')
   } catch (error) {
     errorMessage.value = getApiErrorMessage(
       error,

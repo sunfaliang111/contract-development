@@ -21,6 +21,7 @@ const appInfo = ref<AppInfo>({
 })
 
 const menuItems = [
+  { title: 'ホーム', icon: 'mdi-home-outline', to: '/home' },
   { title: '取引先管理', icon: 'mdi-office-building-outline', to: '/customers' },
   { title: '営業管理', icon: 'mdi-handshake-outline', to: '/sales' },
   { title: '案件管理', icon: 'mdi-briefcase-outline', to: '/projects' },
@@ -76,10 +77,14 @@ onMounted(async () => {
       </v-app-bar-title>
       <v-spacer />
 
+      <v-btn class="mr-2" prepend-icon="mdi-home-outline" to="/home" variant="text">
+        ホーム
+      </v-btn>
+
       <v-menu location="bottom end">
         <template #activator="{ props }">
           <v-btn v-bind="props" append-icon="mdi-chevron-down" prepend-icon="mdi-view-grid-outline" variant="text">
-            {{ currentMenuTitle }}
+            メニュー
           </v-btn>
         </template>
 

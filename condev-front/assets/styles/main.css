@@ -309,6 +309,23 @@ body {
   flex: 1 1 260px;
 }
 
+.home-section-header {
+  align-items: center;
+  border-bottom: 1px solid rgba(18, 53, 91, 0.08);
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 16px;
+}
+
+.home-selectable-row {
+  cursor: pointer;
+}
+
+.home-selectable-row--active {
+  background: #e7f6f1 !important;
+  box-shadow: inset 3px 0 0 #009b77;
+}
+
 .form-section-title {
   color: #12355b;
   font-size: 0.86rem;

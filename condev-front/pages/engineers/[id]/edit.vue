@@ -60,7 +60,7 @@ const form = reactive({
 })
 const loading = ref(true)
 const saving = ref(false)
-const editing = ref(false)
+const editing = ref(true)
 const errorMessage = ref('')
 const successMessage = ref('')
 const fieldErrors = ref<FieldErrors>({})
@@ -85,6 +85,8 @@ const formatDateTime = (value: string) => new Intl.DateTimeFormat('ja-JP', {
   hour: '2-digit',
   minute: '2-digit'
 }).format(new Date(value))
+const assignedProject = computed(() => projects.value.find((project) => project.id === form.projectId) || null)
+const assignedProjectName = computed(() => assignedProject.value?.projectName || form.projectId || '未アサイン')
 
 const syncForm = (item: Detail) => {
   form.personnelName = item.personnelName
@@ -144,9 +146,9 @@ const startEdit = () => {
 
 const cancelEdit = () => {
   if (detail.value) syncForm(detail.value)
-  editing.value = false
   errorMessage.value = ''
   fieldErrors.value = {}
+  navigateTo(`/engineers/${route.params.id}`)
 }
 
 const save = async () => {
@@ -170,8 +172,7 @@ const save = async () => {
     })
     detail.value = data
     syncForm(data)
-    editing.value = false
-    successMessage.value = '要員情報を更新しました。'
+    await navigateTo(`/engineers/${data.id}`)
   } catch {
     errorMessage.value = '要員情報の更新に失敗しました。入力内容を確認してください。'
   } finally {
@@ -221,6 +222,16 @@ onMounted(async () => {
     <v-card class="management-detail-card pa-5 pa-md-6">
       <v-progress-linear v-if="loading" class="mb-5" color="primary" indeterminate />
       <template v-if="detail">
+        <div class="relationship-summary mb-5">
+          <div class="relationship-metric" :class="form.projectId ? 'relationship-metric--success' : 'relationship-metric--warning'">
+            <div class="relationship-metric__label">アサイン状況</div>
+            <div class="relationship-metric__value relationship-metric__value--text">{{ form.projectId ? 'アサイン済' : '未アサイン' }}</div>
+          </div>
+          <div class="relationship-metric">
+            <div class="relationship-metric__label">担当案件</div>
+            <div class="relationship-metric__value relationship-metric__value--text">{{ assignedProjectName }}</div>
+          </div>
+        </div>
         <v-row dense>
           <v-col cols="12" md="6">
             <v-text-field v-model="form.personnelName" class="management-detail-field" :error-messages="fieldErrors.personnelName" :readonly="!editing">

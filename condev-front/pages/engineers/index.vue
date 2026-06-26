@@ -16,8 +16,10 @@ type Personnel = {
 
 type SearchField = 'personnelName' | 'skills' | 'station' | 'representativeSalesName'
 type ListResponse = { items: Personnel[]; total: number; page: number; limit: number; lastPage: number }
-type Project = { id: string; projectName: string }
+type Project = { id: string; projectName: string; customerId: string | null }
 type ProjectListResponse = { items: Project[] }
+type Customer = { id: string; companyName: string }
+type CustomerListResponse = { items: Customer[] }
 
 const { $api } = useNuxtApp()
 
@@ -25,6 +27,7 @@ definePageMeta({ layout: 'authenticated' })
 
 const personnel = ref<Personnel[]>([])
 const projects = ref<Project[]>([])
+const customers = ref<Customer[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
 const page = ref(1)
@@ -57,6 +60,19 @@ const formatDateTime = (value: string) => new Intl.DateTimeFormat('ja-JP', {
   minute: '2-digit'
 }).format(new Date(value))
 const projectName = (projectId: string | null) => projects.value.find((project) => project.id === projectId)?.projectName || projectId || ''
+const customerName = (customerId: string | null) => customers.value.find((customer) => customer.id === customerId)?.companyName || customerId || '-'
+const projectCustomer = (projectId: string | null) => {
+  const project = projects.value.find((item) => item.id === projectId)
+  return project?.customerId ? customerName(project.customerId) : '-'
+}
+const projectCustomerId = (projectId: string | null) => projects.value.find((item) => item.id === projectId)?.customerId || ''
+
+const fetchCustomers = async () => {
+  const { data } = await $api.get<CustomerListResponse>('/customers', {
+    params: { page: 1, limit: 100 }
+  })
+  customers.value = data.items
+}
 
 const fetchProjects = async () => {
   const { data } = await $api.get<ProjectListResponse>('/projects', {
@@ -94,7 +110,7 @@ const goToPage = async (targetPage: number) => fetchPersonnel(Math.min(Math.max(
 const jump = async () => goToPage(jumpPage.value)
 
 onMounted(async () => {
-  await Promise.all([fetchProjects(), fetchPersonnel()])
+  await Promise.all([fetchCustomers(), fetchProjects(), fetchPersonnel()])
 })
 </script>
 
@@ -127,6 +143,7 @@ onMounted(async () => {
             <th>表示名</th>
             <th>スキル</th>
             <th>担当案件</th>
+            <th>取引先</th>
             <th>最寄駅</th>
             <th>担当営業</th>
             <th>登録日時</th>
@@ -144,6 +161,10 @@ onMounted(async () => {
               <NuxtLink v-if="item.projectId" class="management-link" :to="`/projects/${item.projectId}`">{{ projectName(item.projectId) }}</NuxtLink>
               <span v-else class="assignment-status assignment-status--empty">未アサイン</span>
             </td>
+            <td>
+              <NuxtLink v-if="projectCustomerId(item.projectId)" class="management-link" :to="`/customers/${projectCustomerId(item.projectId)}`">{{ projectCustomer(item.projectId) }}</NuxtLink>
+              <span v-else>-</span>
+            </td>
             <td>{{ item.station || '-' }}</td>
             <td>{{ item.representativeSalesName || '-' }}</td>
             <td>{{ formatDateTime(item.registeredAt) }}</td>
@@ -152,7 +173,7 @@ onMounted(async () => {
             <td>{{ item.updatedBy }}</td>
           </tr>
           <tr v-if="!loading && personnel.length === 0">
-            <td class="text-center text-medium-emphasis py-10" colspan="10">要員情報がありません。</td>
+            <td class="text-center text-medium-emphasis py-10" colspan="11">要員情報がありません。</td>
           </tr>
         </tbody>
       </v-table>

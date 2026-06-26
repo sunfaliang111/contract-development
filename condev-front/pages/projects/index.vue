@@ -8,12 +8,14 @@ type Project = {
   beginDate: string
   endDate: string | null
   representativeSalesName: string | null
+  customerId: string | null
   assignedPersonnelCount?: number
   registeredAt: string
   updatedAt: string
   registeredBy: string
   updatedBy: string
 }
+type Customer = { id: string; companyName: string }
 
 type ProjectSearchField = 'projectName' | 'projectOverview' | 'station' | 'representativeSalesName'
 
@@ -24,6 +26,9 @@ type ListResponse = {
   limit: number
   lastPage: number
 }
+type CustomerListResponse = {
+  items: Customer[]
+}
 
 const { $api } = useNuxtApp()
 
@@ -32,6 +37,7 @@ definePageMeta({
 })
 
 const projects = ref<Project[]>([])
+const customers = ref<Customer[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
 const page = ref(1)
@@ -67,6 +73,15 @@ const formatDateTime = (value: string) => new Intl.DateTimeFormat('ja-JP', {
   hour: '2-digit',
   minute: '2-digit'
 }).format(new Date(value))
+const customerName = (customerId: string | null) =>
+  customers.value.find((customer) => customer.id === customerId)?.companyName || customerId || '-'
+
+const fetchCustomers = async () => {
+  const { data } = await $api.get<CustomerListResponse>('/customers', {
+    params: { page: 1, limit: 100 }
+  })
+  customers.value = data.items
+}
 
 const fetchProjects = async (targetPage = page.value) => {
   loading.value = true
@@ -112,7 +127,9 @@ const jump = async () => {
   await goToPage(jumpPage.value)
 }
 
-onMounted(fetchProjects)
+onMounted(async () => {
+  await Promise.all([fetchCustomers(), fetchProjects()])
+})
 </script>
 
 <template>
@@ -150,6 +167,7 @@ onMounted(fetchProjects)
         <thead>
           <tr>
             <th>案件名</th>
+            <th>取引先</th>
             <th>概要</th>
             <th>要員</th>
             <th>最寄駅</th>
@@ -165,6 +183,10 @@ onMounted(fetchProjects)
           <tr v-for="project in projects" :key="project.id">
             <td class="font-weight-medium">
               <NuxtLink class="management-link" :to="`/projects/${project.id}`">{{ project.projectName }}</NuxtLink>
+            </td>
+            <td>
+              <NuxtLink v-if="project.customerId" class="management-link" :to="`/customers/${project.customerId}`">{{ customerName(project.customerId) }}</NuxtLink>
+              <span v-else>-</span>
             </td>
             <td class="wide-cell">{{ project.projectOverview }}</td>
             <td>
@@ -184,7 +206,7 @@ onMounted(fetchProjects)
             <td>{{ project.updatedBy }}</td>
           </tr>
           <tr v-if="!loading && projects.length === 0">
-            <td class="text-center text-medium-emphasis py-10" colspan="10">案件情報がありません。</td>
+            <td class="text-center text-medium-emphasis py-10" colspan="11">案件情報がありません。</td>
           </tr>
         </tbody>
       </v-table>

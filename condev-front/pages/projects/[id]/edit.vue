@@ -393,6 +393,7 @@ onMounted(async () => {
           <thead>
             <tr>
               <th>要員名</th>
+              <th>担当案件</th>
               <th>表示名</th>
               <th>スキル</th>
               <th>操作</th>
@@ -401,17 +402,18 @@ onMounted(async () => {
           <tbody>
             <tr v-for="person in assignedPersonnel" :key="person.id">
               <td><NuxtLink class="management-link" :to="`/engineers/${person.id}`">{{ person.personnelName }}</NuxtLink></td>
+              <td><NuxtLink class="management-link" :to="`/projects/${route.params.id}`">{{ detail.projectName }}</NuxtLink></td>
               <td>{{ person.personnelNameDisplay || '-' }}</td>
               <td>{{ person.skills }}</td>
               <td>
                 <div class="d-flex ga-1">
-                  <v-btn density="comfortable" icon="mdi-pencil" :to="`/engineers/${person.id}`" variant="text" />
+                  <v-btn density="comfortable" icon="mdi-pencil" :to="`/engineers/${person.id}/edit`" variant="text" />
                   <v-btn color="error" density="comfortable" icon="mdi-link-off" variant="text" @click="unassignPersonnel(person)" />
                 </div>
               </td>
             </tr>
             <tr v-if="assignedPersonnel.length === 0">
-              <td class="text-center text-medium-emphasis py-6" colspan="4">この案件にアサインされた要員はありません。</td>
+              <td class="text-center text-medium-emphasis py-6" colspan="5">この案件にアサインされた要員はありません。</td>
             </tr>
           </tbody>
         </v-table>
