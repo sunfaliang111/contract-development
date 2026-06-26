@@ -6,6 +6,7 @@ type Personnel = {
   contractTypeCode: string
   skills: string
   station: string | null
+  projectId: string | null
   representativeSalesName: string | null
   registeredAt: string
   updatedAt: string
@@ -15,12 +16,15 @@ type Personnel = {
 
 type SearchField = 'personnelName' | 'skills' | 'station' | 'representativeSalesName'
 type ListResponse = { items: Personnel[]; total: number; page: number; limit: number; lastPage: number }
+type Project = { id: string; projectName: string }
+type ProjectListResponse = { items: Project[] }
 
 const { $api } = useNuxtApp()
 
 definePageMeta({ layout: 'authenticated' })
 
 const personnel = ref<Personnel[]>([])
+const projects = ref<Project[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
 const page = ref(1)
@@ -52,6 +56,14 @@ const formatDateTime = (value: string) => new Intl.DateTimeFormat('ja-JP', {
   hour: '2-digit',
   minute: '2-digit'
 }).format(new Date(value))
+const projectName = (projectId: string | null) => projects.value.find((project) => project.id === projectId)?.projectName || projectId || ''
+
+const fetchProjects = async () => {
+  const { data } = await $api.get<ProjectListResponse>('/projects', {
+    params: { page: 1, limit: 100 }
+  })
+  projects.value = data.items
+}
 
 const fetchPersonnel = async (targetPage = page.value) => {
   loading.value = true
@@ -81,7 +93,9 @@ const clearSearch = async () => {
 const goToPage = async (targetPage: number) => fetchPersonnel(Math.min(Math.max(Math.trunc(targetPage || 1), 1), lastPage.value))
 const jump = async () => goToPage(jumpPage.value)
 
-onMounted(fetchPersonnel)
+onMounted(async () => {
+  await Promise.all([fetchProjects(), fetchPersonnel()])
+})
 </script>
 
 <template>
@@ -112,6 +126,7 @@ onMounted(fetchPersonnel)
             <th>要員名</th>
             <th>表示名</th>
             <th>スキル</th>
+            <th>担当案件</th>
             <th>最寄駅</th>
             <th>担当営業</th>
             <th>登録日時</th>
@@ -125,6 +140,10 @@ onMounted(fetchPersonnel)
             <td class="font-weight-medium"><NuxtLink class="management-link" :to="`/engineers/${item.id}`">{{ item.personnelName }}</NuxtLink></td>
             <td>{{ item.personnelNameDisplay || '-' }}</td>
             <td class="wide-cell">{{ item.skills }}</td>
+            <td>
+              <NuxtLink v-if="item.projectId" class="management-link" :to="`/projects/${item.projectId}`">{{ projectName(item.projectId) }}</NuxtLink>
+              <span v-else class="assignment-status assignment-status--empty">未アサイン</span>
+            </td>
             <td>{{ item.station || '-' }}</td>
             <td>{{ item.representativeSalesName || '-' }}</td>
             <td>{{ formatDateTime(item.registeredAt) }}</td>
@@ -133,7 +152,7 @@ onMounted(fetchPersonnel)
             <td>{{ item.updatedBy }}</td>
           </tr>
           <tr v-if="!loading && personnel.length === 0">
-            <td class="text-center text-medium-emphasis py-10" colspan="9">要員情報がありません。</td>
+            <td class="text-center text-medium-emphasis py-10" colspan="10">要員情報がありません。</td>
           </tr>
         </tbody>
       </v-table>

@@ -29,15 +29,15 @@ export class ProjectPersonnel {
   @Column({ type: 'text', nullable: true })
   remarks!: string | null
 
-  @CreateDateColumn({ name: 'registered_at' })
+  @CreateDateColumn({ name: 'created_at' })
   registeredAt!: Date
 
-  @Column({ name: 'registered_by', length: 128 })
+  @Column({ name: 'created_by', type: 'varchar', length: 128, nullable: true })
   registeredBy!: string
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date
 
-  @Column({ name: 'updated_by', length: 128 })
+  @Column({ name: 'updated_by', type: 'varchar', length: 128, nullable: true })
   updatedBy!: string
 }

@@ -1,10 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
+import { Personnel } from '../personnel/personnel.entity'
 import { UsersService } from '../users/users.service'
 import { CreateProjectDto } from './dto/create-project.dto'
 import { UpdateProjectDto } from './dto/update-project.dto'
 import { ProjectJobCategory } from './project-job-category.entity'
+import { ProjectPersonnel } from './project-personnel.entity'
 import { Project } from './project.entity'
 import { ProjectSearchField } from './types/project-search-field.type'
 
@@ -45,6 +47,10 @@ export class ProjectsService {
     private readonly projectsRepository: Repository<Project>,
     @InjectRepository(ProjectJobCategory)
     private readonly projectJobCategoriesRepository: Repository<ProjectJobCategory>,
+    @InjectRepository(ProjectPersonnel)
+    private readonly projectPersonnelRepository: Repository<ProjectPersonnel>,
+    @InjectRepository(Personnel)
+    private readonly personnelRepository: Repository<Personnel>,
     private readonly usersService: UsersService
   ) {}
 
@@ -77,7 +83,7 @@ export class ProjectsService {
     const lastPage = Math.max(Math.ceil(total / limit), 1)
 
     return {
-      items: items.map((item) => this.toResponse(item)),
+      items: await Promise.all(items.map((item) => this.toResponse(item))),
       total,
       page,
       limit,
@@ -141,6 +147,21 @@ export class ProjectsService {
     return this.findOne(id)
   }
 
+  async remove(id: string) {
+    const project = await this.projectsRepository.findOne({ where: { id } })
+
+    if (!project) {
+      throw new NotFoundException('案件情報が見つかりません。')
+    }
+
+    await this.personnelRepository.update({ projectId: id }, { projectId: null })
+    await this.projectPersonnelRepository.delete({ projectId: id })
+    await this.projectJobCategoriesRepository.delete({ projectId: id })
+    await this.projectsRepository.delete({ id })
+
+    return { deleted: true }
+  }
+
   private toEntityValues(dto: UpdateProjectDto) {
     return {
       projectName: dto.projectName,
@@ -194,9 +215,14 @@ export class ProjectsService {
     return `${prefix}${String(latestSequence + 1).padStart(4, '0')}`
   }
 
-  private toResponse(project: Project) {
+  private async toResponse(project: Project) {
+    const assignedPersonnelCount = await this.personnelRepository.count({
+      where: { projectId: project.id }
+    })
+
     return {
       ...project,
+      assignedPersonnelCount,
       jobCategoryCodes: (project.jobCategories || []).map((item) => item.jobCategoryCode)
     }
   }

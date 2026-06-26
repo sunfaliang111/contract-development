@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { CurrentUser } from '../auth/current-user.decorator'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { JwtPayload } from '../auth/types/jwt-payload.type'
@@ -46,5 +46,19 @@ export class PersonnelController {
     @CurrentUser() user: JwtPayload
   ) {
     return this.personnelService.update(id, updatePersonnelDto, user.sub)
+  }
+
+  @Patch(':id/assignment')
+  updateAssignment(
+    @Param('id') id: string,
+    @Body('projectId') projectId: string | null,
+    @CurrentUser() user: JwtPayload
+  ) {
+    return this.personnelService.updateAssignment(id, projectId || null, user.sub)
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.personnelService.remove(id)
   }
 }

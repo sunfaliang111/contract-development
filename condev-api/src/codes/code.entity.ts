@@ -23,10 +23,10 @@ export class Code {
   @Column({ type: 'text', nullable: true })
   remarks!: string | null
 
-  @CreateDateColumn({ name: 'registered_at' })
+  @CreateDateColumn({ name: 'created_at' })
   registeredAt!: Date
 
-  @Column({ name: 'registered_by', length: 128, default: 'system' })
+  @Column({ name: 'created_by', length: 128, default: 'system' })
   registeredBy!: string
 
   @UpdateDateColumn({ name: 'updated_at' })

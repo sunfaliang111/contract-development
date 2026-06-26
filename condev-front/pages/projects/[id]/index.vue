@@ -6,7 +6,13 @@ type CodeItem = { code: string; codeValue: string }
 type CodesResponse = Record<string, CodeItem[]>
 type Customer = { id: string; companyName: string }
 type CustomerListResponse = { items: Customer[] }
-type PersonnelItem = { id: string; personnelName: string; personnelNameDisplay: string | null; skills: string }
+type PersonnelItem = {
+  id: string
+  personnelName: string
+  personnelNameDisplay: string | null
+  skills: string
+  projectId: string | null
+}
 type PersonnelListResponse = { items: PersonnelItem[] }
 type Detail = {
   id: string
@@ -43,6 +49,8 @@ const detail = ref<Detail | null>(null)
 const codes = ref<CodesResponse>({})
 const customers = ref<Customer[]>([])
 const assignedPersonnel = ref<PersonnelItem[]>([])
+const allPersonnel = ref<PersonnelItem[]>([])
+const selectedPersonnelId = ref('')
 const form = reactive({
   projectName: '',
   projectOverview: '',
@@ -72,6 +80,7 @@ const fieldErrors = ref<FieldErrors>({})
 
 const schema = yup.object({
   projectName: yup.string().trim().required('案件名を入力してください。'),
+  customerId: yup.string().required('取引先を選択してください。'),
   projectOverview: yup.string().trim().required('案件概要を入力してください。'),
   jobCategoryCodes: yup.array().of(yup.string().required()).min(1, '職種を1つ以上選択してください。'),
   commercialFlowCode: yup.string().required('商流を選択してください。'),
@@ -88,6 +97,19 @@ const formatDateTime = (value: string) => new Intl.DateTimeFormat('ja-JP', {
   hour: '2-digit',
   minute: '2-digit'
 }).format(new Date(value))
+const customerName = computed(() =>
+  customers.value.find((customer) => customer.id === detail.value?.customerId)?.companyName || detail.value?.customerId || '-'
+)
+const availablePersonnel = computed(() =>
+  allPersonnel.value.filter((person) => !person.projectId || person.projectId === detail.value?.id)
+)
+const newPersonnelPath = computed(() => ({
+  path: '/engineers/new',
+  query: {
+    projectId: String(route.params.id),
+    returnTo: String(route.fullPath)
+  }
+}))
 
 const syncForm = (item: Detail) => {
   form.projectName = item.projectName
@@ -129,6 +151,13 @@ const fetchAssignedPersonnel = async () => {
     params: { page: 1, limit: 100, projectId: route.params.id }
   })
   assignedPersonnel.value = data.items
+}
+
+const fetchAllPersonnel = async () => {
+  const { data } = await $api.get<PersonnelListResponse>('/personnel', {
+    params: { page: 1, limit: 100 }
+  })
+  allPersonnel.value = data.items
 }
 
 const fetchDetail = async () => {
@@ -189,10 +218,60 @@ const save = async () => {
   }
 }
 
+const assignPersonnel = async () => {
+  if (!selectedPersonnelId.value) return
+
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  try {
+    await $api.patch(`/personnel/${selectedPersonnelId.value}/assignment`, {
+      projectId: route.params.id
+    })
+    selectedPersonnelId.value = ''
+    await Promise.all([fetchAssignedPersonnel(), fetchAllPersonnel()])
+    successMessage.value = '要員をアサインしました。'
+  } catch {
+    errorMessage.value = '要員のアサインに失敗しました。'
+  }
+}
+
+const unassignPersonnel = async (person: PersonnelItem) => {
+  if (!window.confirm(`要員「${person.personnelName}」のアサインを解除します。よろしいですか？`)) {
+    return
+  }
+
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  try {
+    await $api.patch(`/personnel/${person.id}/assignment`, {
+      projectId: null
+    })
+    await Promise.all([fetchAssignedPersonnel(), fetchAllPersonnel()])
+    successMessage.value = '要員のアサインを解除しました。'
+  } catch {
+    errorMessage.value = '要員のアサイン解除に失敗しました。'
+  }
+}
+
+const deleteProject = async () => {
+  if (!detail.value || !window.confirm(`案件「${detail.value.projectName}」を削除します。よろしいですか？`)) {
+    return
+  }
+
+  try {
+    await $api.delete(`/projects/${detail.value.id}`)
+    await navigateTo(detail.value.customerId ? `/customers/${detail.value.customerId}` : '/projects')
+  } catch {
+    errorMessage.value = '案件の削除に失敗しました。'
+  }
+}
+
 onMounted(async () => {
   await Promise.all([fetchCodes(), fetchCustomers()])
   await fetchDetail()
-  await fetchAssignedPersonnel()
+  await Promise.all([fetchAssignedPersonnel(), fetchAllPersonnel()])
 })
 </script>
 
@@ -205,7 +284,8 @@ onMounted(async () => {
       </div>
       <div class="d-flex ga-2">
         <v-btn prepend-icon="mdi-arrow-left" variant="outlined" to="/projects">一覧へ戻る</v-btn>
-        <v-btn v-if="!editing" color="primary" prepend-icon="mdi-pencil" :disabled="!detail" @click="startEdit">編集</v-btn>
+        <v-btn v-if="!editing" color="primary" prepend-icon="mdi-pencil" :disabled="!detail" :to="`/projects/${route.params.id}/edit`">編集</v-btn>
+        <v-btn v-if="!editing" color="error" prepend-icon="mdi-delete-outline" variant="outlined" :disabled="!detail" @click="deleteProject">削除</v-btn>
         <template v-else>
           <v-btn prepend-icon="mdi-close" variant="outlined" :disabled="saving" @click="cancelEdit">キャンセル</v-btn>
           <v-btn color="primary" prepend-icon="mdi-content-save" :loading="saving" @click="save">保存</v-btn>
@@ -224,8 +304,10 @@ onMounted(async () => {
             </v-text-field>
           </v-col>
           <v-col cols="12" md="6">
-            <v-select v-if="editing" v-model="form.customerId" class="management-detail-field" clearable item-title="companyName" item-value="id" :items="customers" label="取引先" />
-            <v-text-field v-else class="management-detail-field" label="取引先" :model-value="customers.find((customer) => customer.id === detail?.customerId)?.companyName || detail?.customerId || '-'" readonly />
+            <v-select v-if="editing" v-model="form.customerId" class="management-detail-field" clearable :error-messages="fieldErrors.customerId" item-title="companyName" item-value="id" :items="customers">
+              <template #label><RequiredLabel>取引先</RequiredLabel></template>
+            </v-select>
+            <v-text-field v-else class="management-detail-field" label="取引先" :model-value="customerName" readonly />
           </v-col>
           <v-col cols="12">
             <v-textarea v-model="form.projectOverview" auto-grow class="management-detail-field" :error-messages="fieldErrors.projectOverview" :readonly="!editing" rows="2">
@@ -275,9 +357,38 @@ onMounted(async () => {
           <v-btn color="primary" prepend-icon="mdi-content-save" :loading="saving" @click="save">保存</v-btn>
         </div>
         <v-divider class="my-6" />
+        <div class="relationship-summary mb-5">
+          <div class="relationship-metric">
+            <div class="relationship-metric__label">取引先</div>
+            <div class="relationship-metric__value relationship-metric__value--text">{{ customerName }}</div>
+          </div>
+          <div class="relationship-metric" :class="assignedPersonnel.length > 0 ? 'relationship-metric--success' : 'relationship-metric--warning'">
+            <div class="relationship-metric__label">アサイン状況</div>
+            <div class="relationship-metric__value">{{ assignedPersonnel.length > 0 ? `${assignedPersonnel.length}名` : '未' }}</div>
+          </div>
+          <div class="relationship-metric">
+            <div class="relationship-metric__label">必要職種</div>
+            <div class="relationship-metric__value relationship-metric__value--text">{{ form.jobCategoryCodes.map((code) => codeValue('JOB_CATEGORY', code)).join('、') || '-' }}</div>
+          </div>
+        </div>
+        <div class="relationship-action-row mb-5">
+          <v-select
+            v-model="selectedPersonnelId"
+            class="management-detail-field relationship-action-row__select"
+            clearable
+            density="compact"
+            hide-details
+            item-title="personnelName"
+            item-value="id"
+            :items="availablePersonnel"
+            label="既存要員を選択"
+          />
+          <v-btn color="primary" prepend-icon="mdi-account-check-outline" :disabled="!selectedPersonnelId" @click="assignPersonnel">アサイン</v-btn>
+          <v-btn prepend-icon="mdi-account-plus-outline" variant="outlined" :to="newPersonnelPath">要員を登録</v-btn>
+        </div>
         <div class="d-flex align-center justify-space-between mb-3">
           <h2 class="text-subtitle-1 font-weight-bold">アサイン要員</h2>
-          <v-btn prepend-icon="mdi-account-plus-outline" variant="outlined" to="/engineers/new">要員を登録</v-btn>
+          <v-btn prepend-icon="mdi-format-list-bulleted" variant="text" to="/engineers">要員一覧</v-btn>
         </div>
         <v-table density="comfortable">
           <thead>
@@ -285,6 +396,7 @@ onMounted(async () => {
               <th>要員名</th>
               <th>表示名</th>
               <th>スキル</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -292,9 +404,15 @@ onMounted(async () => {
               <td><NuxtLink class="management-link" :to="`/engineers/${person.id}`">{{ person.personnelName }}</NuxtLink></td>
               <td>{{ person.personnelNameDisplay || '-' }}</td>
               <td>{{ person.skills }}</td>
+              <td>
+                <div class="d-flex ga-1">
+                  <v-btn density="comfortable" icon="mdi-pencil" :to="`/engineers/${person.id}`" variant="text" />
+                  <v-btn color="error" density="comfortable" icon="mdi-link-off" variant="text" @click="unassignPersonnel(person)" />
+                </div>
+              </td>
             </tr>
             <tr v-if="assignedPersonnel.length === 0">
-              <td class="text-center text-medium-emphasis py-6" colspan="3">この案件にアサインされた要員はありません。</td>
+              <td class="text-center text-medium-emphasis py-6" colspan="4">この案件にアサインされた要員はありません。</td>
             </tr>
           </tbody>
         </v-table>

@@ -6,7 +6,7 @@ import {
   UpdateDateColumn
 } from 'typeorm'
 
-@Entity('users')
+@Entity('m_users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id!: string
@@ -22,6 +22,12 @@ export class User {
 
   @Column({ name: 'password_hash', length: 255 })
   passwordHash!: string
+
+  @Column({ length: 32, default: 'sales' })
+  role!: string
+
+  @Column({ length: 32, default: 'active' })
+  status!: string
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date

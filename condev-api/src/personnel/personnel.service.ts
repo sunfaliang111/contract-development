@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
+import { ProjectPersonnel } from '../projects/project-personnel.entity'
 import { UsersService } from '../users/users.service'
 import { CreatePersonnelDto } from './dto/create-personnel.dto'
 import { UpdatePersonnelDto } from './dto/update-personnel.dto'
@@ -45,6 +46,8 @@ export class PersonnelService {
     private readonly personnelRepository: Repository<Personnel>,
     @InjectRepository(PersonnelJobCategory)
     private readonly personnelJobCategoriesRepository: Repository<PersonnelJobCategory>,
+    @InjectRepository(ProjectPersonnel)
+    private readonly projectPersonnelRepository: Repository<ProjectPersonnel>,
     private readonly usersService: UsersService
   ) {}
 
@@ -139,6 +142,39 @@ export class PersonnelService {
     await this.replaceJobCategories(id, updatePersonnelDto.jobCategoryCodes)
 
     return this.findOne(id)
+  }
+
+  async updateAssignment(id: string, projectId: string | null, updatedByUserId: string) {
+    const personnel = await this.personnelRepository.findOne({ where: { id } })
+    const user = await this.usersService.findById(updatedByUserId)
+
+    if (!personnel) {
+      throw new NotFoundException('要員情報が見つかりません。')
+    }
+
+    if (!user) {
+      throw new NotFoundException('ユーザー情報が見つかりません。')
+    }
+
+    personnel.projectId = projectId || null
+    personnel.updatedBy = user.userName
+    await this.personnelRepository.save(personnel)
+
+    return this.findOne(id)
+  }
+
+  async remove(id: string) {
+    const personnel = await this.personnelRepository.findOne({ where: { id } })
+
+    if (!personnel) {
+      throw new NotFoundException('要員情報が見つかりません。')
+    }
+
+    await this.projectPersonnelRepository.delete({ personnelId: id })
+    await this.personnelJobCategoriesRepository.delete({ personnelId: id })
+    await this.personnelRepository.delete({ id })
+
+    return { deleted: true }
   }
 
   private toEntityValues(dto: UpdatePersonnelDto) {

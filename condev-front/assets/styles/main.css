@@ -257,6 +257,85 @@ body {
   font-weight: 700;
 }
 
+.relationship-summary {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.relationship-metric {
+  background: #f8fafc;
+  border: 1px solid rgba(18, 53, 91, 0.08);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.relationship-metric--success {
+  background: #f0f9f5;
+  border-color: rgba(0, 155, 119, 0.18);
+}
+
+.relationship-metric--warning {
+  background: #fff8ed;
+  border-color: rgba(213, 139, 40, 0.2);
+}
+
+.relationship-metric__label {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.relationship-metric__value {
+  color: #12355b;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.relationship-metric__value--text {
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.relationship-action-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.relationship-action-row__select {
+  flex: 1 1 260px;
+}
+
+.form-section-title {
+  color: #12355b;
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.assignment-status {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 6px 9px;
+  white-space: nowrap;
+}
+
+.assignment-status--assigned {
+  background: #e7f6f1;
+  color: #007f62;
+}
+
+.assignment-status--empty {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
 .customer-detail-field .v-field--appended,
 .customer-detail-field .v-field--prepended,
 .management-detail-field .v-field--appended,

@@ -179,6 +179,20 @@ const save = async () => {
   }
 }
 
+const deletePersonnel = async () => {
+  if (!detail.value || !window.confirm(`要員「${detail.value.personnelName}」を削除します。よろしいですか？`)) {
+    return
+  }
+
+  try {
+    const projectId = detail.value.projectId
+    await $api.delete(`/personnel/${detail.value.id}`)
+    await navigateTo(projectId ? `/projects/${projectId}` : '/engineers')
+  } catch {
+    errorMessage.value = '要員の削除に失敗しました。'
+  }
+}
+
 onMounted(async () => {
   await Promise.all([fetchCodes(), fetchProjects()])
   await fetchDetail()
@@ -195,6 +209,7 @@ onMounted(async () => {
       <div class="d-flex ga-2">
         <v-btn prepend-icon="mdi-arrow-left" variant="outlined" to="/engineers">一覧へ戻る</v-btn>
         <v-btn v-if="!editing" color="primary" prepend-icon="mdi-pencil" :disabled="!detail" @click="startEdit">編集</v-btn>
+        <v-btn v-if="!editing" color="error" prepend-icon="mdi-delete-outline" variant="outlined" :disabled="!detail" @click="deletePersonnel">削除</v-btn>
         <template v-else>
           <v-btn prepend-icon="mdi-close" variant="outlined" :disabled="saving" @click="cancelEdit">キャンセル</v-btn>
           <v-btn color="primary" prepend-icon="mdi-content-save" :loading="saving" @click="save">保存</v-btn>

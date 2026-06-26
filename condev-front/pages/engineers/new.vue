@@ -9,6 +9,7 @@ type Project = { id: string; projectName: string }
 type ProjectListResponse = { items: Project[] }
 
 const { $api } = useNuxtApp()
+const route = useRoute()
 
 definePageMeta({ layout: 'authenticated' })
 
@@ -49,6 +50,8 @@ const schema = yup.object({
 })
 
 const codeOptions = (type: string) => (codes.value[type] || []).map((item) => ({ title: item.codeValue, value: item.code }))
+const returnTo = computed(() => typeof route.query.returnTo === 'string' ? route.query.returnTo : '')
+const cancelTo = computed(() => returnTo.value || '/engineers')
 
 const fetchCodes = async () => {
   const { data } = await $api.get<CodesResponse>('/codes', {
@@ -64,6 +67,9 @@ const fetchProjects = async () => {
     params: { page: 1, limit: 100 }
   })
   projects.value = data.items
+  if (typeof route.query.projectId === 'string') {
+    form.projectId = route.query.projectId
+  }
 }
 
 const createPersonnel = async () => {
@@ -84,7 +90,7 @@ const createPersonnel = async () => {
       projectId: form.projectId || null,
       remarks: form.remarks || null
     })
-    await navigateTo(`/engineers/${data.id}`)
+    await navigateTo(returnTo.value || `/engineers/${data.id}`)
   } catch {
     errorMessage.value = '要員情報の登録に失敗しました。入力内容を確認してください。'
   } finally {
@@ -105,8 +111,8 @@ onMounted(async () => {
         <p class="text-body-2 text-medium-emphasis mb-0">新しい要員情報を登録できます。</p>
       </div>
       <div class="d-flex ga-2">
-        <v-btn prepend-icon="mdi-arrow-left" variant="outlined" to="/engineers">一覧へ戻る</v-btn>
-        <v-btn prepend-icon="mdi-close" variant="outlined" :disabled="saving" to="/engineers">キャンセル</v-btn>
+        <v-btn prepend-icon="mdi-arrow-left" variant="outlined" :to="cancelTo">一覧へ戻る</v-btn>
+        <v-btn prepend-icon="mdi-close" variant="outlined" :disabled="saving" :to="cancelTo">キャンセル</v-btn>
         <v-btn color="primary" prepend-icon="mdi-content-save" :loading="saving" @click="createPersonnel">保存</v-btn>
       </div>
     </div>
@@ -160,7 +166,7 @@ onMounted(async () => {
         <v-col cols="12"><v-textarea v-model="form.remarks" auto-grow class="management-detail-field" label="備考" rows="3" /></v-col>
       </v-row>
       <div class="management-detail-actions mt-4">
-        <v-btn prepend-icon="mdi-close" variant="outlined" :disabled="saving" to="/engineers">キャンセル</v-btn>
+        <v-btn prepend-icon="mdi-close" variant="outlined" :disabled="saving" :to="cancelTo">キャンセル</v-btn>
         <v-btn color="primary" prepend-icon="mdi-content-save" :loading="saving" @click="createPersonnel">保存</v-btn>
       </div>
     </v-card>

@@ -8,6 +8,7 @@ type Project = {
   beginDate: string
   endDate: string | null
   representativeSalesName: string | null
+  assignedPersonnelCount?: number
   registeredAt: string
   updatedAt: string
   registeredBy: string
@@ -150,6 +151,7 @@ onMounted(fetchProjects)
           <tr>
             <th>案件名</th>
             <th>概要</th>
+            <th>要員</th>
             <th>最寄駅</th>
             <th>期間</th>
             <th>担当営業</th>
@@ -165,6 +167,14 @@ onMounted(fetchProjects)
               <NuxtLink class="management-link" :to="`/projects/${project.id}`">{{ project.projectName }}</NuxtLink>
             </td>
             <td class="wide-cell">{{ project.projectOverview }}</td>
+            <td>
+              <span
+                class="assignment-status"
+                :class="(project.assignedPersonnelCount || 0) > 0 ? 'assignment-status--assigned' : 'assignment-status--empty'"
+              >
+                {{ (project.assignedPersonnelCount || 0) > 0 ? `${project.assignedPersonnelCount}名` : '未アサイン' }}
+              </span>
+            </td>
             <td>{{ project.station || '-' }}</td>
             <td>{{ formatDate(project.beginDate) }} ～ {{ formatDate(project.endDate) }}</td>
             <td>{{ project.representativeSalesName || '-' }}</td>
@@ -174,7 +184,7 @@ onMounted(fetchProjects)
             <td>{{ project.updatedBy }}</td>
           </tr>
           <tr v-if="!loading && projects.length === 0">
-            <td class="text-center text-medium-emphasis py-10" colspan="9">案件情報がありません。</td>
+            <td class="text-center text-medium-emphasis py-10" colspan="10">案件情報がありません。</td>
           </tr>
         </tbody>
       </v-table>
