@@ -1,17 +1,25 @@
 <script setup lang="ts">
+import * as yup from 'yup'
+import type { FieldErrors } from '~/composables/useYupValidation'
+
 type CustomerDetail = {
   id: string
   companyName: string
   companyNameKana: string | null
-  representativeName: string
+  representativeName: string | null
   postalCode: string | null
-  address: string
+  address: string | null
   buildingName: string | null
-  phoneNumber: string
+  phoneNumber: string | null
   faxNumber: string | null
+  invoiceNo: string | null
   siteUrl: string | null
-  importance: string | null
+  proposalCategoryCode: string | null
+  importanceCode: string | null
+  scheduledContractStartDate: string | null
   contractConclusionDate: string | null
+  scheduledContractEndDate: string | null
+  contractEndDate: string | null
   primarySales: string | null
   secondarySales: string | null
   remarks: string | null
@@ -25,6 +33,15 @@ type PostalCodeSearchResponse = {
   postalCode: string
   address: string | null
 }
+type Project = {
+  id: string
+  projectName: string
+  projectOverview: string
+  beginDate: string
+  endDate: string | null
+  representativeSalesName: string | null
+}
+type ProjectListResponse = { items: Project[] }
 
 const { $api } = useNuxtApp()
 const route = useRoute()
@@ -34,6 +51,7 @@ definePageMeta({
 })
 
 const customer = ref<CustomerDetail | null>(null)
+const relatedProjects = ref<Project[]>([])
 const form = reactive({
   companyName: '',
   companyNameKana: '',
@@ -43,9 +61,14 @@ const form = reactive({
   buildingName: '',
   phoneNumber: '',
   faxNumber: '',
+  invoiceNo: '',
   siteUrl: '',
-  importance: '',
+  proposalCategoryCode: '',
+  importanceCode: '',
+  scheduledContractStartDate: '',
   contractConclusionDate: '',
+  scheduledContractEndDate: '',
+  contractEndDate: '',
   primarySales: '',
   secondarySales: '',
   remarks: ''
@@ -56,10 +79,28 @@ const searchingPostalCode = ref(false)
 const editing = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const fieldErrors = ref<FieldErrors>({})
 
-const pageTitle = computed(() => editing.value ? '顧客編集' : '顧客参照')
+const schema = yup.object({
+  companyName: yup.string().trim().required('企業名を入力してください。'),
+  proposalCategoryCode: yup.string().required('提案区分を選択してください。'),
+  primarySales: yup.string().trim().required('自社担当営業（主担当）を入力してください。'),
+  siteUrl: yup.string().trim().url('URL形式で入力してください。').nullable().transform((value) => value || null)
+})
+
+const proposalCategoryItems = [
+  { title: '案件', value: 'PROJECT' },
+  { title: '人材', value: 'PERSONNEL' }
+]
+const importanceItems = [
+  { title: '高', value: 'HIGH' },
+  { title: '中', value: 'MIDDLE' },
+  { title: '低', value: 'LOW' }
+]
+
+const pageTitle = computed(() => editing.value ? '取引先編集' : '取引先参照')
 const pageDescription = computed(() =>
-  editing.value ? '顧客の詳細情報を編集できます。' : '顧客の詳細情報を確認できます。'
+  editing.value ? '取引先の詳細情報を編集できます。' : '取引先の詳細情報を確認できます。'
 )
 
 const formatDateTime = (value: string | null | undefined) => {
@@ -88,18 +129,30 @@ const formatDate = (value: string | null | undefined) => {
   }).format(new Date(value))
 }
 
+const fetchRelatedProjects = async () => {
+  const { data } = await $api.get<ProjectListResponse>('/projects', {
+    params: { page: 1, limit: 100, customerId: route.params.id }
+  })
+  relatedProjects.value = data.items
+}
+
 const syncForm = (detail: CustomerDetail) => {
   form.companyName = detail.companyName
   form.companyNameKana = detail.companyNameKana || ''
-  form.representativeName = detail.representativeName
+  form.representativeName = detail.representativeName || ''
   form.postalCode = detail.postalCode || ''
-  form.address = detail.address
+  form.address = detail.address || ''
   form.buildingName = detail.buildingName || ''
-  form.phoneNumber = detail.phoneNumber
+  form.phoneNumber = detail.phoneNumber || ''
   form.faxNumber = detail.faxNumber || ''
+  form.invoiceNo = detail.invoiceNo || ''
   form.siteUrl = detail.siteUrl || ''
-  form.importance = detail.importance || ''
+  form.proposalCategoryCode = detail.proposalCategoryCode || ''
+  form.importanceCode = detail.importanceCode || ''
+  form.scheduledContractStartDate = detail.scheduledContractStartDate || ''
   form.contractConclusionDate = detail.contractConclusionDate || ''
+  form.scheduledContractEndDate = detail.scheduledContractEndDate || ''
+  form.contractEndDate = detail.contractEndDate || ''
   form.primarySales = detail.primarySales || ''
   form.secondarySales = detail.secondarySales || ''
   form.remarks = detail.remarks || ''
@@ -114,7 +167,7 @@ const fetchCustomer = async () => {
     customer.value = data
     syncForm(data)
   } catch {
-    errorMessage.value = '顧客情報の取得に失敗しました。'
+    errorMessage.value = '取引先情報の取得に失敗しました。'
   } finally {
     loading.value = false
   }
@@ -138,6 +191,7 @@ const cancelEdit = () => {
 
   editing.value = false
   errorMessage.value = ''
+  fieldErrors.value = {}
 }
 
 const searchAddressByPostalCode = async () => {
@@ -174,6 +228,9 @@ const searchAddressByPostalCode = async () => {
 }
 
 const saveCustomer = async () => {
+  fieldErrors.value = await validateYupForm(schema, form)
+  if (Object.keys(fieldErrors.value).length > 0) return
+
   saving.value = true
   errorMessage.value = ''
   successMessage.value = ''
@@ -182,12 +239,20 @@ const saveCustomer = async () => {
     const { data } = await $api.patch<CustomerDetail>(`/customers/${route.params.id}`, {
       ...form,
       companyNameKana: form.companyNameKana || null,
+      representativeName: form.representativeName || null,
       postalCode: form.postalCode || null,
+      address: form.address || null,
       buildingName: form.buildingName || null,
+      phoneNumber: form.phoneNumber || null,
       faxNumber: form.faxNumber || null,
+      invoiceNo: form.invoiceNo || null,
       siteUrl: form.siteUrl || null,
-      importance: form.importance || null,
+      proposalCategoryCode: form.proposalCategoryCode || null,
+      importanceCode: form.importanceCode || null,
+      scheduledContractStartDate: form.scheduledContractStartDate || null,
       contractConclusionDate: form.contractConclusionDate || null,
+      scheduledContractEndDate: form.scheduledContractEndDate || null,
+      contractEndDate: form.contractEndDate || null,
       primarySales: form.primarySales || null,
       secondarySales: form.secondarySales || null,
       remarks: form.remarks || null
@@ -195,9 +260,9 @@ const saveCustomer = async () => {
     customer.value = data
     syncForm(data)
     editing.value = false
-    successMessage.value = '顧客情報を更新しました。'
+    successMessage.value = '取引先情報を更新しました。'
   } catch {
-    errorMessage.value = '顧客情報の更新に失敗しました。入力内容を確認してください。'
+    errorMessage.value = '取引先情報の更新に失敗しました。入力内容を確認してください。'
   } finally {
     saving.value = false
   }
@@ -205,6 +270,7 @@ const saveCustomer = async () => {
 
 onMounted(async () => {
   await fetchCustomer()
+  await fetchRelatedProjects()
 })
 </script>
 
@@ -266,9 +332,11 @@ onMounted(async () => {
             <v-text-field
               v-model="form.companyName"
               class="customer-detail-field"
-              label="企業名"
+              :error-messages="fieldErrors.companyName"
               :readonly="!editing"
-            />
+            >
+              <template #label><RequiredLabel>企業名</RequiredLabel></template>
+            </v-text-field>
           </v-col>
           <v-col cols="12" md="6">
             <v-text-field
@@ -330,10 +398,19 @@ onMounted(async () => {
               :readonly="!editing"
             />
           </v-col>
+          <v-col cols="12" md="6">
+            <v-text-field
+              v-model="form.invoiceNo"
+              class="customer-detail-field"
+              label="適格請求書発行事業者登録番号"
+              :readonly="!editing"
+            />
+          </v-col>
           <v-col cols="12" md="8">
             <v-text-field
               v-model="form.siteUrl"
               class="customer-detail-field"
+              :error-messages="fieldErrors.siteUrl"
               label="サイトURL"
               :readonly="!editing"
             />
@@ -353,12 +430,40 @@ onMounted(async () => {
           </v-col>
           <v-col cols="12" md="4">
             <v-select
-              v-model="form.importance"
+              v-model="form.proposalCategoryCode"
               class="customer-detail-field"
               clearable
-              :items="['高', '中', '低']"
+              :error-messages="fieldErrors.proposalCategoryCode"
+              :items="proposalCategoryItems"
+              :readonly="!editing"
+            >
+              <template #label><RequiredLabel>提案区分</RequiredLabel></template>
+            </v-select>
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-select
+              v-model="form.importanceCode"
+              class="customer-detail-field"
+              clearable
+              :items="importanceItems"
               label="重要度"
               :readonly="!editing"
+            />
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-text-field
+              v-if="editing"
+              v-model="form.scheduledContractStartDate"
+              class="customer-detail-field"
+              label="契約開始予定日"
+              type="date"
+            />
+            <v-text-field
+              v-else
+              class="customer-detail-field"
+              label="契約開始予定日"
+              :model-value="formatDate(customer.scheduledContractStartDate)"
+              readonly
             />
           </v-col>
           <v-col cols="12" md="4">
@@ -379,11 +484,45 @@ onMounted(async () => {
           </v-col>
           <v-col cols="12" md="4">
             <v-text-field
+              v-if="editing"
+              v-model="form.scheduledContractEndDate"
+              class="customer-detail-field"
+              label="契約終了予定日"
+              type="date"
+            />
+            <v-text-field
+              v-else
+              class="customer-detail-field"
+              label="契約終了予定日"
+              :model-value="formatDate(customer.scheduledContractEndDate)"
+              readonly
+            />
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-text-field
+              v-if="editing"
+              v-model="form.contractEndDate"
+              class="customer-detail-field"
+              label="契約終了日"
+              type="date"
+            />
+            <v-text-field
+              v-else
+              class="customer-detail-field"
+              label="契約終了日"
+              :model-value="formatDate(customer.contractEndDate)"
+              readonly
+            />
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-text-field
               v-model="form.primarySales"
               class="customer-detail-field"
-              label="自社担当営業（主担当）"
+              :error-messages="fieldErrors.primarySales"
               :readonly="!editing"
-            />
+            >
+              <template #label><RequiredLabel>自社担当営業（主担当）</RequiredLabel></template>
+            </v-text-field>
           </v-col>
           <v-col cols="12" md="4">
             <v-text-field
@@ -445,6 +584,32 @@ onMounted(async () => {
             保存
           </v-btn>
         </div>
+        <v-divider class="my-6" />
+        <div class="d-flex align-center justify-space-between mb-3">
+          <h2 class="text-subtitle-1 font-weight-bold">関連案件</h2>
+          <v-btn prepend-icon="mdi-plus" variant="outlined" to="/projects/new">案件を登録</v-btn>
+        </div>
+        <v-table density="comfortable">
+          <thead>
+            <tr>
+              <th>案件名</th>
+              <th>概要</th>
+              <th>期間</th>
+              <th>担当営業</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="project in relatedProjects" :key="project.id">
+              <td><NuxtLink class="management-link" :to="`/projects/${project.id}`">{{ project.projectName }}</NuxtLink></td>
+              <td>{{ project.projectOverview }}</td>
+              <td>{{ formatDate(project.beginDate) }} ～ {{ formatDate(project.endDate) }}</td>
+              <td>{{ project.representativeSalesName || '-' }}</td>
+            </tr>
+            <tr v-if="relatedProjects.length === 0">
+              <td class="text-center text-medium-emphasis py-6" colspan="4">この取引先に紐づく案件はありません。</td>
+            </tr>
+          </tbody>
+        </v-table>
       </template>
     </v-card>
   </div>

@@ -9,6 +9,7 @@ node_modules
 dist
 coverage
 .DS_Store
+outputs/
 condev-api/docker/mysql/data
 condev-api/docker/mysql/backup/*.sql
 npm-debug.log*

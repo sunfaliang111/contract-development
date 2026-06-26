@@ -11,6 +11,18 @@ const visible = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
 
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  const responseMessage = (error as {
+    response?: { data?: { message?: string | string[] } }
+  }).response?.data?.message
+
+  if (Array.isArray(responseMessage)) {
+    return responseMessage.join('\n')
+  }
+
+  return responseMessage || fallback
+}
+
 const emailRules = [
   (value: string) => !!value || 'メールアドレスを入力してください',
   (value: string) => /.+@.+\..+/.test(value) || 'メールアドレスの形式で入力してください'
@@ -31,8 +43,11 @@ const submit = async () => {
       localStorage.setItem('accessToken', data.accessToken)
     }
     await navigateTo('/customers')
-  } catch {
-    errorMessage.value = 'ログインに失敗しました。入力内容を確認してください。'
+  } catch (error) {
+    errorMessage.value = getApiErrorMessage(
+      error,
+      'ログインに失敗しました。入力内容を確認してください。'
+    )
   } finally {
     loading.value = false
   }
@@ -50,11 +65,11 @@ const submit = async () => {
             </div>
             <div class="text-h3 font-weight-bold mb-6">SES業務管理</div>
             <p class="text-body-1 mb-10">
-              顧客、案件、契約、請求までを一元管理するための社内業務基盤です。
+              取引先、案件、契約、請求までを一元管理するための社内業務基盤です。
             </p>
             <div class="d-flex flex-column ga-6">
               <div class="status-item">
-                <div class="text-subtitle-1 font-weight-bold">顧客情報</div>
+                <div class="text-subtitle-1 font-weight-bold">取引先情報</div>
                 <div class="text-body-2 opacity-80">企業、担当者、契約窓口を整理</div>
               </div>
               <div class="status-item">

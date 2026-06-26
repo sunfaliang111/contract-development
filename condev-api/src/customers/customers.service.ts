@@ -40,7 +40,7 @@ const formatCustomerIdDate = (date: Date) => {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
-  return `${year}${month}${day}`
+    return `${year}${month}${day}`
 }
 
 @Injectable()
@@ -88,7 +88,7 @@ export class CustomersService {
     })
 
     if (!customer) {
-      throw new NotFoundException('顧客情報が見つかりません。')
+      throw new NotFoundException('取引先情報が見つかりません。')
     }
 
     return customer
@@ -135,15 +135,20 @@ export class CustomersService {
       id: customerId,
       companyName: createCustomerDto.companyName,
       companyNameKana: createCustomerDto.companyNameKana || null,
-      representativeName: createCustomerDto.representativeName,
+      representativeName: createCustomerDto.representativeName || null,
       postalCode: createCustomerDto.postalCode || null,
-      address: createCustomerDto.address,
+      address: createCustomerDto.address || null,
       buildingName: createCustomerDto.buildingName || null,
-      phoneNumber: createCustomerDto.phoneNumber,
+      phoneNumber: createCustomerDto.phoneNumber || null,
       faxNumber: createCustomerDto.faxNumber || null,
+      invoiceNo: createCustomerDto.invoiceNo || null,
       siteUrl: createCustomerDto.siteUrl || null,
-      importance: createCustomerDto.importance || null,
+      proposalCategoryCode: createCustomerDto.proposalCategoryCode || null,
+      importanceCode: createCustomerDto.importanceCode || null,
+      scheduledContractStartDate: createCustomerDto.scheduledContractStartDate || null,
       contractConclusionDate: createCustomerDto.contractConclusionDate || null,
+      scheduledContractEndDate: createCustomerDto.scheduledContractEndDate || null,
+      contractEndDate: createCustomerDto.contractEndDate || null,
       primarySales: createCustomerDto.primarySales || null,
       secondarySales: createCustomerDto.secondarySales || null,
       remarks: createCustomerDto.remarks || null,
@@ -181,15 +186,20 @@ export class CustomersService {
     Object.assign(customer, {
       companyName: updateCustomerDto.companyName,
       companyNameKana: updateCustomerDto.companyNameKana || null,
-      representativeName: updateCustomerDto.representativeName,
+      representativeName: updateCustomerDto.representativeName || null,
       postalCode: updateCustomerDto.postalCode || null,
-      address: updateCustomerDto.address,
+      address: updateCustomerDto.address || null,
       buildingName: updateCustomerDto.buildingName || null,
-      phoneNumber: updateCustomerDto.phoneNumber,
+      phoneNumber: updateCustomerDto.phoneNumber || null,
       faxNumber: updateCustomerDto.faxNumber || null,
+      invoiceNo: updateCustomerDto.invoiceNo || null,
       siteUrl: updateCustomerDto.siteUrl || null,
-      importance: updateCustomerDto.importance || null,
+      proposalCategoryCode: updateCustomerDto.proposalCategoryCode || null,
+      importanceCode: updateCustomerDto.importanceCode || null,
+      scheduledContractStartDate: updateCustomerDto.scheduledContractStartDate || null,
       contractConclusionDate: updateCustomerDto.contractConclusionDate || null,
+      scheduledContractEndDate: updateCustomerDto.scheduledContractEndDate || null,
+      contractEndDate: updateCustomerDto.contractEndDate || null,
       primarySales: updateCustomerDto.primarySales || null,
       secondarySales: updateCustomerDto.secondarySales || null,
       remarks: updateCustomerDto.remarks || null,

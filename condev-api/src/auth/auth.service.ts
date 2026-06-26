@@ -31,7 +31,7 @@ export class AuthService {
       throw new ConflictException('このメールアドレスはすでに登録されています')
     }
 
-    const passwordHash = await bcrypt.hash(registerDto.password, 12)
+    const passwordHash = await bcrypt.hash(registerDto.password, 10)
     const user = await this.usersService.create({
       companyName: registerDto.companyName,
       userName: registerDto.userName,

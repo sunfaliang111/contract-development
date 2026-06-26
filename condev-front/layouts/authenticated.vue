@@ -21,7 +21,7 @@ const appInfo = ref<AppInfo>({
 })
 
 const menuItems = [
-  { title: '顧客管理', icon: 'mdi-office-building-outline', to: '/customers' },
+  { title: '取引先管理', icon: 'mdi-office-building-outline', to: '/customers' },
   { title: '営業管理', icon: 'mdi-handshake-outline', to: '/sales' },
   { title: '案件管理', icon: 'mdi-briefcase-outline', to: '/projects' },
   { title: '要員管理', icon: 'mdi-account-group-outline', to: '/engineers' },

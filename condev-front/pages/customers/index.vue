@@ -3,14 +3,15 @@ type Customer = {
   id: string
   companyName: string
   companyNameKana: string | null
-  representativeName: string
+  representativeName: string | null
   postalCode: string | null
-  address: string
+  address: string | null
   buildingName: string | null
-  phoneNumber: string
+  phoneNumber: string | null
   faxNumber: string | null
+  invoiceNo: string | null
   siteUrl: string | null
-  importance: string | null
+  importanceCode: string | null
   contractConclusionDate: string | null
   primarySales: string | null
   secondarySales: string | null
@@ -95,7 +96,7 @@ const fetchCustomers = async (targetPage = page.value) => {
     lastPage.value = data.lastPage
     jumpPage.value = data.page
   } catch {
-    errorMessage.value = '顧客情報の取得に失敗しました。再ログインしてください。'
+    errorMessage.value = '取引先情報の取得に失敗しました。再ログインしてください。'
   } finally {
     loading.value = false
   }
@@ -129,8 +130,8 @@ onMounted(async () => {
   <div class="customer-page">
     <div class="d-flex align-center justify-space-between mb-5">
       <div>
-        <h1 class="text-h5 font-weight-bold mb-1">顧客一覧</h1>
-        <p class="text-body-2 text-medium-emphasis mb-0">登録済み顧客の基本情報を確認できます。</p>
+        <h1 class="text-h5 font-weight-bold mb-1">取引先一覧</h1>
+        <p class="text-body-2 text-medium-emphasis mb-0">登録済み取引先の基本情報を確認できます。</p>
       </div>
       <v-btn color="primary" prepend-icon="mdi-plus" to="/customers/new">新規登録</v-btn>
     </div>
@@ -186,6 +187,7 @@ onMounted(async () => {
             <th>住所</th>
             <th>電話番号</th>
             <th>FAX番号</th>
+            <th>登録番号</th>
             <th>登録日時</th>
             <th>更新日時</th>
             <th>登録者</th>
@@ -199,18 +201,19 @@ onMounted(async () => {
                 {{ customer.companyName }}
               </NuxtLink>
             </td>
-            <td>{{ customer.representativeName }}</td>
-            <td class="address-cell">{{ customer.address }}</td>
-            <td>{{ customer.phoneNumber }}</td>
+            <td>{{ customer.representativeName || '-' }}</td>
+            <td class="address-cell">{{ customer.address || '-' }}</td>
+            <td>{{ customer.phoneNumber || '-' }}</td>
             <td>{{ customer.faxNumber || '-' }}</td>
+            <td>{{ customer.invoiceNo || '-' }}</td>
             <td>{{ formatDateTime(customer.registeredAt) }}</td>
             <td>{{ formatDateTime(customer.updatedAt) }}</td>
             <td>{{ customer.registeredBy }}</td>
             <td>{{ customer.updatedBy }}</td>
           </tr>
           <tr v-if="!loading && customers.length === 0">
-            <td class="text-center text-medium-emphasis py-10" colspan="9">
-              顧客情報がありません。
+            <td class="text-center text-medium-emphasis py-10" colspan="10">
+              取引先情報がありません。
             </td>
           </tr>
         </tbody>

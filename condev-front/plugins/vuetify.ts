@@ -1,7 +1,62 @@
-import '@mdi/font/css/materialdesignicons.css'
 import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
+import {
+  VAlert,
+  VApp,
+  VAppBar,
+  VAppBarTitle,
+  VBtn,
+  VCard,
+  VCheckbox,
+  VCol,
+  VContainer,
+  VDivider,
+  VFooter,
+  VForm,
+  VLayout,
+  VList,
+  VListItem,
+  VMain,
+  VMenu,
+  VProgressLinear,
+  VRow,
+  VSelect,
+  VSpacer,
+  VTable,
+  VTextField,
+  VTextarea
+} from 'vuetify/components'
+import { Ripple } from 'vuetify/directives'
+
+const components = {
+  VAlert,
+  VApp,
+  VAppBar,
+  VAppBarTitle,
+  VBtn,
+  VCard,
+  VCheckbox,
+  VCol,
+  VContainer,
+  VDivider,
+  VFooter,
+  VForm,
+  VLayout,
+  VList,
+  VListItem,
+  VMain,
+  VMenu,
+  VProgressLinear,
+  VRow,
+  VSelect,
+  VSpacer,
+  VTable,
+  VTextField,
+  VTextarea
+}
+
+const directives = {
+  Ripple
+}
 
 export default defineNuxtPlugin((nuxtApp) => {
   const vuetify = createVuetify({

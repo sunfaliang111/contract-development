@@ -15,6 +15,18 @@ const confirmVisible = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
 
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  const responseMessage = (error as {
+    response?: { data?: { message?: string | string[] } }
+  }).response?.data?.message
+
+  if (Array.isArray(responseMessage)) {
+    return responseMessage.join('\n')
+  }
+
+  return responseMessage || fallback
+}
+
 const requiredRule = (label: string) => (value: string) => !!value || `${label}を入力してください`
 const emailRules = [
   requiredRule('メールアドレス'),
@@ -39,8 +51,11 @@ const submit = async () => {
   try {
     await $api.post('/auth/register', form)
     await navigateTo('/login')
-  } catch {
-    errorMessage.value = '登録に失敗しました。入力内容を確認してください。'
+  } catch (error) {
+    errorMessage.value = getApiErrorMessage(
+      error,
+      '登録に失敗しました。入力内容を確認してください。'
+    )
   } finally {
     loading.value = false
   }
@@ -56,14 +71,14 @@ const submit = async () => {
             <div class="auth-side__logo-wrap mb-8">
               <img alt="SNS SOFT" class="auth-side__logo" src="/images/snssoft-logo.svg">
             </div>
-            <div class="text-h3 font-weight-bold mb-6">顧客管理を始める</div>
+            <div class="text-h3 font-weight-bold mb-6">取引先管理を始める</div>
             <p class="text-body-1 mb-10">
-              SES受託開発の顧客接点を、担当者ごとの記憶ではなくチームの資産として残します。
+              SES受託開発の取引先接点を、担当者ごとの記憶ではなくチームの資産として残します。
             </p>
             <div class="d-flex flex-column ga-6">
               <div class="status-item">
                 <div class="text-subtitle-1 font-weight-bold">会社情報</div>
-                <div class="text-body-2 opacity-80">顧客企業の基本属性を管理</div>
+                <div class="text-body-2 opacity-80">取引先企業の基本属性を管理</div>
               </div>
               <div class="status-item">
                 <div class="text-subtitle-1 font-weight-bold">担当者情報</div>
