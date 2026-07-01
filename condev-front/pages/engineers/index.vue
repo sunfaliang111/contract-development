@@ -37,6 +37,9 @@ const lastPage = ref(1)
 const jumpPage = ref(1)
 const searchField = ref<SearchField>('personnelName')
 const keyword = ref('')
+const sortKey = ref('personnelName')
+const sortDirection = ref<'asc' | 'desc'>('asc')
+const columnFilters = reactive<Record<string, string>>({})
 
 const searchFields = [
   { title: '要員名', value: 'personnelName' },
@@ -66,6 +69,53 @@ const projectCustomer = (projectId: string | null) => {
   return project?.customerId ? customerName(project.customerId) : '-'
 }
 const projectCustomerId = (projectId: string | null) => projects.value.find((item) => item.id === projectId)?.customerId || ''
+
+const personnelColumnValue = (item: Personnel, column: string) => {
+  switch (column) {
+    case 'personnelName': return item.personnelName
+    case 'personnelNameDisplay': return item.personnelNameDisplay || ''
+    case 'skills': return item.skills || ''
+    case 'projectName': return projectName(item.projectId)
+    case 'customerName': return projectCustomer(item.projectId)
+    case 'station': return item.station || ''
+    case 'representativeSalesName': return item.representativeSalesName || ''
+    case 'registeredAt': return item.registeredAt
+    case 'updatedAt': return item.updatedAt
+    case 'registeredBy': return item.registeredBy
+    case 'updatedBy': return item.updatedBy
+    default: return ''
+  }
+}
+
+const compareValues = (left: string, right: string) => left.localeCompare(right, 'ja', {
+  numeric: true,
+  sensitivity: 'base'
+})
+
+const visiblePersonnel = computed(() => {
+  const activeFilters = Object.entries(columnFilters).filter(([, value]) => value)
+  return [...personnel.value]
+    .filter((item) => activeFilters.every(([column, value]) =>
+      personnelColumnValue(item, column).toLowerCase().includes(value.toLowerCase())
+    ))
+    .sort((left, right) => {
+      const result = compareValues(personnelColumnValue(left, sortKey.value), personnelColumnValue(right, sortKey.value))
+      return sortDirection.value === 'asc' ? result : -result
+    })
+})
+
+const sortBy = (column: string) => {
+  if (sortKey.value === column) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+    return
+  }
+  sortKey.value = column
+  sortDirection.value = 'asc'
+}
+
+const filterBy = (column: string, value: string) => {
+  columnFilters[column] = value
+}
 
 const fetchCustomers = async () => {
   const { data } = await $api.get<CustomerListResponse>('/customers', {
@@ -139,24 +189,37 @@ onMounted(async () => {
       <v-table fixed-header height="calc(100vh - 360px)">
         <thead>
           <tr>
-            <th>要員名</th>
-            <th>表示名</th>
-            <th>スキル</th>
-            <th>担当案件</th>
-            <th>取引先</th>
-            <th>最寄駅</th>
-            <th>担当営業</th>
-            <th>登録日時</th>
-            <th>更新日時</th>
-            <th>登録者</th>
-            <th>更新者</th>
+            <th><ListHeaderCell column="personnelName" filterable label="要員名" :filter-value="columnFilters.personnelName" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="personnelNameDisplay" filterable label="表示名" :filter-value="columnFilters.personnelNameDisplay" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="skills" filterable label="スキル" :filter-value="columnFilters.skills" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell label="経歴書" :filterable="false" :sortable="false" /></th>
+            <th><ListHeaderCell column="projectName" filterable label="担当案件" :filter-value="columnFilters.projectName" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="customerName" filterable label="取引先" :filter-value="columnFilters.customerName" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="station" filterable label="最寄駅" :filter-value="columnFilters.station" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="representativeSalesName" filterable label="担当営業" :filter-value="columnFilters.representativeSalesName" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="registeredAt" label="登録日時" :filterable="false" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="registeredBy" filterable label="登録者" :filter-value="columnFilters.registeredBy" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="updatedAt" label="更新日時" :filterable="false" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="updatedBy" filterable label="更新者" :filter-value="columnFilters.updatedBy" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in personnel" :key="item.id">
+          <tr v-for="item in visiblePersonnel" :key="item.id">
             <td class="font-weight-medium"><NuxtLink class="management-link" :to="`/engineers/${item.id}`">{{ item.personnelName }}</NuxtLink></td>
             <td>{{ item.personnelNameDisplay || '-' }}</td>
             <td class="wide-cell">{{ item.skills }}</td>
+            <td>
+              <v-btn
+                color="primary"
+                density="comfortable"
+                prepend-icon="mdi-file-account-outline"
+                size="small"
+                :to="`/resumes?personnelId=${item.id}`"
+                variant="tonal"
+              >
+                経歴書
+              </v-btn>
+            </td>
             <td>
               <NuxtLink v-if="item.projectId" class="management-link" :to="`/projects/${item.projectId}`">{{ projectName(item.projectId) }}</NuxtLink>
               <span v-else class="assignment-status assignment-status--empty">未アサイン</span>
@@ -168,12 +231,12 @@ onMounted(async () => {
             <td>{{ item.station || '-' }}</td>
             <td>{{ item.representativeSalesName || '-' }}</td>
             <td>{{ formatDateTime(item.registeredAt) }}</td>
-            <td>{{ formatDateTime(item.updatedAt) }}</td>
             <td>{{ item.registeredBy }}</td>
+            <td>{{ formatDateTime(item.updatedAt) }}</td>
             <td>{{ item.updatedBy }}</td>
           </tr>
-          <tr v-if="!loading && personnel.length === 0">
-            <td class="text-center text-medium-emphasis py-10" colspan="11">要員情報がありません。</td>
+          <tr v-if="!loading && visiblePersonnel.length === 0">
+            <td class="text-center text-medium-emphasis py-10" colspan="12">要員情報がありません。</td>
           </tr>
         </tbody>
       </v-table>

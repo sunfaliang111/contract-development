@@ -48,6 +48,9 @@ const lastPage = ref(1)
 const jumpPage = ref(1)
 const searchField = ref<CustomerSearchField>('companyName')
 const keyword = ref('')
+const sortKey = ref('companyName')
+const sortDirection = ref<'asc' | 'desc'>('asc')
+const columnFilters = reactive<Record<string, string>>({})
 
 const searchFields = [
   { title: '企業名', value: 'companyName' },
@@ -74,6 +77,52 @@ const formatDateTime = (value: string) => {
     hour: '2-digit',
     minute: '2-digit'
   }).format(new Date(value))
+}
+
+const customerColumnValue = (customer: Customer, column: string) => {
+  switch (column) {
+    case 'companyName': return customer.companyName
+    case 'representativeName': return customer.representativeName || ''
+    case 'address': return customer.address || ''
+    case 'phoneNumber': return customer.phoneNumber || ''
+    case 'faxNumber': return customer.faxNumber || ''
+    case 'invoiceNo': return customer.invoiceNo || ''
+    case 'registeredBy': return customer.registeredBy
+    case 'updatedBy': return customer.updatedBy
+    case 'registeredAt': return customer.registeredAt
+    case 'updatedAt': return customer.updatedAt
+    default: return ''
+  }
+}
+
+const compareValues = (left: string, right: string) => left.localeCompare(right, 'ja', {
+  numeric: true,
+  sensitivity: 'base'
+})
+
+const visibleCustomers = computed(() => {
+  const activeFilters = Object.entries(columnFilters).filter(([, value]) => value)
+  return [...customers.value]
+    .filter((customer) => activeFilters.every(([column, value]) =>
+      customerColumnValue(customer, column).toLowerCase().includes(value.toLowerCase())
+    ))
+    .sort((left, right) => {
+      const result = compareValues(customerColumnValue(left, sortKey.value), customerColumnValue(right, sortKey.value))
+      return sortDirection.value === 'asc' ? result : -result
+    })
+})
+
+const sortBy = (column: string) => {
+  if (sortKey.value === column) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+    return
+  }
+  sortKey.value = column
+  sortDirection.value = 'asc'
+}
+
+const filterBy = (column: string, value: string) => {
+  columnFilters[column] = value
 }
 
 const fetchCustomers = async (targetPage = page.value) => {
@@ -182,20 +231,20 @@ onMounted(async () => {
       <v-table fixed-header height="calc(100vh - 360px)">
         <thead>
           <tr>
-            <th>企業名</th>
-            <th>法人代表</th>
-            <th>住所</th>
-            <th>電話番号</th>
-            <th>FAX番号</th>
-            <th>登録番号</th>
-            <th>登録日時</th>
-            <th>更新日時</th>
-            <th>登録者</th>
-            <th>更新者</th>
+            <th><ListHeaderCell column="companyName" filterable label="企業名" :filter-value="columnFilters.companyName" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="representativeName" filterable label="法人代表" :filter-value="columnFilters.representativeName" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="address" filterable label="住所" :filter-value="columnFilters.address" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="phoneNumber" filterable label="電話番号" :filter-value="columnFilters.phoneNumber" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="faxNumber" filterable label="FAX番号" :filter-value="columnFilters.faxNumber" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="invoiceNo" filterable label="登録番号" :filter-value="columnFilters.invoiceNo" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="registeredAt" label="登録日時" :filterable="false" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="updatedAt" label="更新日時" :filterable="false" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="registeredBy" filterable label="登録者" :filter-value="columnFilters.registeredBy" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="updatedBy" filterable label="更新者" :filter-value="columnFilters.updatedBy" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="customer in customers" :key="customer.id">
+          <tr v-for="customer in visibleCustomers" :key="customer.id">
             <td class="font-weight-medium">
               <NuxtLink class="customer-company-link" :to="`/customers/${customer.id}`">
                 {{ customer.companyName }}
@@ -211,7 +260,7 @@ onMounted(async () => {
             <td>{{ customer.registeredBy }}</td>
             <td>{{ customer.updatedBy }}</td>
           </tr>
-          <tr v-if="!loading && customers.length === 0">
+          <tr v-if="!loading && visibleCustomers.length === 0">
             <td class="text-center text-medium-emphasis py-10" colspan="10">
               取引先情報がありません。
             </td>

@@ -38,6 +38,9 @@ const projects = ref<Project[]>([])
 const saving = ref(false)
 const errorMessage = ref('')
 const fieldErrors = ref<FieldErrors>({})
+const resumeFilePicker = ref<HTMLInputElement | null>(null)
+const resumeFile = ref<File | null>(null)
+const resumeTitle = ref('')
 
 const schema = yup.object({
   personnelName: yup.string().trim().required('要員名を入力してください。'),
@@ -52,6 +55,37 @@ const schema = yup.object({
 const codeOptions = (type: string) => (codes.value[type] || []).map((item) => ({ title: item.codeValue, value: item.code }))
 const returnTo = computed(() => typeof route.query.returnTo === 'string' ? route.query.returnTo : '')
 const cancelTo = computed(() => returnTo.value || '/engineers')
+const selectedResumeFileName = computed(() => resumeFile.value?.name || '')
+
+const handleResumeFileChange = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.item(0) || null
+  resumeFile.value = file
+  if (file && !resumeTitle.value) {
+    resumeTitle.value = file.name
+  }
+}
+
+const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader()
+  reader.onload = () => {
+    const result = String(reader.result || '')
+    resolve(result.includes(',') ? result.split(',')[1] : result)
+  }
+  reader.onerror = () => reject(reader.error)
+  reader.readAsDataURL(file)
+})
+
+const uploadResume = async (personnelId: string) => {
+  if (!resumeFile.value) return
+
+  await $api.post(`/personnel/${personnelId}/resumes`, {
+    title: resumeTitle.value || resumeFile.value.name,
+    fileName: resumeFile.value.name,
+    contentType: resumeFile.value.type || 'application/octet-stream',
+    contentBase64: await toBase64(resumeFile.value)
+  })
+}
 
 const fetchCodes = async () => {
   const { data } = await $api.get<CodesResponse>('/codes', {
@@ -90,6 +124,14 @@ const createPersonnel = async () => {
       projectId: form.projectId || null,
       remarks: form.remarks || null
     })
+    if (resumeFile.value) {
+      try {
+        await uploadResume(data.id)
+      } catch {
+        await navigateTo(`/engineers/${data.id}/edit?resumeUploadFailed=1`)
+        return
+      }
+    }
     await navigateTo(returnTo.value || `/engineers/${data.id}`)
   } catch {
     errorMessage.value = '要員情報の登録に失敗しました。入力内容を確認してください。'
@@ -165,6 +207,36 @@ onMounted(async () => {
         <v-col cols="12" md="6"><v-select v-model="form.projectId" class="management-detail-field" clearable item-title="projectName" item-value="id" :items="projects" label="担当案件" /></v-col>
         <v-col cols="12"><v-textarea v-model="form.remarks" auto-grow class="management-detail-field" label="備考" rows="3" /></v-col>
       </v-row>
+      <v-divider class="my-6" />
+      <div class="mb-4">
+        <h2 class="text-subtitle-1 font-weight-bold mb-1">経歴書</h2>
+        <p class="text-caption text-medium-emphasis mb-0">要員保存後、選択したPDF、Word、Excel形式の経歴書を自動登録します。</p>
+      </div>
+      <v-row align="center" dense>
+        <v-col cols="12" md="4">
+          <v-text-field v-model="resumeTitle" class="management-detail-field" density="compact" hide-details label="タイトル" />
+        </v-col>
+        <v-col cols="12" md="5">
+          <label class="resume-file-field">
+            <span class="resume-file-field__label">経歴書ファイル</span>
+            <span class="resume-file-field__body">
+              <v-icon icon="mdi-paperclip" size="18" />
+              <span class="resume-file-field__name">{{ selectedResumeFileName || 'ファイルを選択' }}</span>
+              <v-icon icon="mdi-folder-open-outline" size="20" />
+            </span>
+            <input
+              ref="resumeFilePicker"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              class="resume-file-field__input"
+              type="file"
+              @change="handleResumeFileChange"
+            />
+          </label>
+        </v-col>
+        <v-col cols="12" md="3">
+          <div class="text-caption text-medium-emphasis">任意登録</div>
+        </v-col>
+      </v-row>
       <div class="management-detail-actions mt-4">
         <v-btn prepend-icon="mdi-close" variant="outlined" :disabled="saving" :to="cancelTo">キャンセル</v-btn>
         <v-btn color="primary" prepend-icon="mdi-content-save" :loading="saving" @click="createPersonnel">保存</v-btn>
@@ -172,3 +244,54 @@ onMounted(async () => {
     </v-card>
   </div>
 </template>
+
+<style scoped>
+.resume-file-field {
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.38);
+  border-radius: 4px;
+  cursor: pointer;
+  display: block;
+  min-height: 40px;
+  padding: 6px 12px;
+  position: relative;
+}
+
+.resume-file-field:hover {
+  border-color: rgba(var(--v-theme-on-surface), 0.86);
+}
+
+.resume-file-field__label {
+  background: rgb(var(--v-theme-surface));
+  color: rgba(var(--v-theme-on-surface), 0.7);
+  font-size: 12px;
+  left: 10px;
+  line-height: 1;
+  padding: 0 4px;
+  position: absolute;
+  top: -7px;
+}
+
+.resume-file-field__body {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.resume-file-field__name {
+  flex: 1;
+  font-size: 14px;
+  line-height: 26px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resume-file-field__input {
+  height: 1px;
+  opacity: 0;
+  position: absolute;
+  width: 1px;
+}
+</style>

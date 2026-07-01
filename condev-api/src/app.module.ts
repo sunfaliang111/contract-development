@@ -10,6 +10,7 @@ import { Customer } from './customers/customer.entity'
 import { PersonnelJobCategory } from './personnel/personnel-job-category.entity'
 import { Personnel } from './personnel/personnel.entity'
 import { PersonnelModule } from './personnel/personnel.module'
+import { Resume } from './personnel/resume.entity'
 import { ProjectJobCategory } from './projects/project-job-category.entity'
 import { ProjectPersonnel } from './projects/project-personnel.entity'
 import { Project } from './projects/project.entity'
@@ -39,7 +40,8 @@ import { User } from './users/user.entity'
           ProjectJobCategory,
           ProjectPersonnel,
           Personnel,
-          PersonnelJobCategory
+          PersonnelJobCategory,
+          Resume
         ],
         // Keep disabled for local data safety. Schema changes should be applied explicitly.
         synchronize: config.get<string>('DB_SYNCHRONIZE', 'false') === 'true'

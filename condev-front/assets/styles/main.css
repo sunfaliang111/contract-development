@@ -189,7 +189,132 @@ body {
   color: #334155;
   font-size: 0.78rem;
   font-weight: 700;
+  min-width: 130px;
+  vertical-align: top;
   white-space: nowrap;
+}
+
+.list-header-cell {
+  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+.list-header-cell__toolbar {
+  align-items: center;
+  display: inline-flex;
+  gap: 3px;
+  min-height: 20px;
+}
+
+.list-header-cell__sort {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 700;
+  gap: 4px;
+  justify-content: flex-start;
+  padding: 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.list-header-cell__sort-indicator {
+  align-items: center;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 15px;
+  justify-content: center;
+  width: 9px;
+}
+
+.list-header-cell__sort-triangle {
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  display: block;
+  height: 0;
+  opacity: 0.42;
+  width: 0;
+}
+
+.list-header-cell__sort-triangle--asc {
+  border-bottom: 5px solid #64748b;
+}
+
+.list-header-cell__sort-triangle--desc {
+  border-top: 5px solid #64748b;
+}
+
+.list-header-cell__sort-triangle--asc.list-header-cell__sort-triangle--active {
+  border-bottom-color: #007f62;
+  opacity: 1;
+}
+
+.list-header-cell__sort-triangle--desc.list-header-cell__sort-triangle--active {
+  border-top-color: #007f62;
+  opacity: 1;
+}
+
+.list-header-cell__filter-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #334155;
+  cursor: pointer;
+  display: inline-flex;
+  height: 22px;
+  justify-content: center;
+  opacity: 0.72;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  width: 22px;
+}
+
+.list-header-cell:hover .list-header-cell__filter-toggle,
+.list-header-cell:focus-within .list-header-cell__filter-toggle,
+.list-header-cell__filter-toggle--active {
+  opacity: 1;
+}
+
+.list-header-cell__filter-toggle:hover,
+.list-header-cell__filter-toggle--active {
+  background: transparent;
+  color: #007f62;
+}
+
+.list-header-cell__funnel {
+  background: currentColor;
+  clip-path: polygon(0 0, 100% 0, 62% 48%, 62% 100%, 38% 100%, 38% 48%);
+  display: inline-block;
+  height: 12px;
+  width: 13px;
+}
+
+.list-header-cell__sort--active {
+  color: #007f62;
+}
+
+.list-header-cell__filter {
+  max-width: 140px;
+  min-width: 108px;
+}
+
+.list-header-cell__filter .v-field {
+  font-size: 0.76rem;
+  min-height: 28px;
+}
+
+.list-header-cell__filter .v-field__input {
+  min-height: 28px;
+  padding-bottom: 0;
+  padding-top: 0;
 }
 
 .customer-table-card td,

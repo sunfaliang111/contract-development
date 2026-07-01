@@ -26,6 +26,7 @@ const menuItems = [
   { title: '営業管理', icon: 'mdi-handshake-outline', to: '/sales' },
   { title: '案件管理', icon: 'mdi-briefcase-outline', to: '/projects' },
   { title: '要員管理', icon: 'mdi-account-group-outline', to: '/engineers' },
+  { title: '経歴書管理', icon: 'mdi-file-account-outline', to: '/resumes' },
   { title: 'スキル管理', icon: 'mdi-star-outline', to: '/skills' },
   { title: '見積もり管理', icon: 'mdi-file-document-edit-outline', to: '/estimates' },
   { title: '契約管理', icon: 'mdi-file-sign-outline', to: '/contracts' }

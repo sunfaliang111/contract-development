@@ -197,6 +197,9 @@ const deletePersonnel = async () => {
 onMounted(async () => {
   await Promise.all([fetchCodes(), fetchProjects()])
   await fetchDetail()
+  if (route.query.resumeUploadFailed === '1') {
+    errorMessage.value = '要員情報は登録しましたが、経歴書の登録に失敗しました。ファイル形式を確認して、この画面から再度アップロードしてください。'
+  }
 })
 </script>
 
@@ -209,6 +212,14 @@ onMounted(async () => {
       </div>
       <div class="d-flex ga-2">
         <v-btn prepend-icon="mdi-arrow-left" variant="outlined" to="/engineers">一覧へ戻る</v-btn>
+        <v-btn
+          color="primary"
+          prepend-icon="mdi-file-account-outline"
+          :to="`/resumes?personnelId=${route.params.id}`"
+          variant="tonal"
+        >
+          経歴書管理
+        </v-btn>
         <v-btn v-if="!editing" color="primary" prepend-icon="mdi-pencil" :disabled="!detail" @click="startEdit">編集</v-btn>
         <v-btn v-if="!editing" color="error" prepend-icon="mdi-delete-outline" variant="outlined" :disabled="!detail" @click="deletePersonnel">削除</v-btn>
         <template v-else>
@@ -300,6 +311,8 @@ onMounted(async () => {
           <v-btn prepend-icon="mdi-close" variant="outlined" :disabled="saving" @click="cancelEdit">キャンセル</v-btn>
           <v-btn color="primary" prepend-icon="mdi-content-save" :loading="saving" @click="save">保存</v-btn>
         </div>
+        <v-divider class="my-6" />
+        <ResumeManager :personnel-id="detail.id" />
       </template>
     </v-card>
   </div>

@@ -47,6 +47,9 @@ const lastPage = ref(1)
 const jumpPage = ref(1)
 const searchField = ref<ProjectSearchField>('projectName')
 const keyword = ref('')
+const sortKey = ref('projectName')
+const sortDirection = ref<'asc' | 'desc'>('asc')
+const columnFilters = reactive<Record<string, string>>({})
 
 const searchFields = [
   { title: '案件名', value: 'projectName' },
@@ -75,6 +78,53 @@ const formatDateTime = (value: string) => new Intl.DateTimeFormat('ja-JP', {
 }).format(new Date(value))
 const customerName = (customerId: string | null) =>
   customers.value.find((customer) => customer.id === customerId)?.companyName || customerId || '-'
+
+const projectColumnValue = (project: Project, column: string) => {
+  switch (column) {
+    case 'projectName': return project.projectName
+    case 'customerName': return customerName(project.customerId)
+    case 'projectOverview': return project.projectOverview
+    case 'assignedPersonnelCount': return String(project.assignedPersonnelCount || 0)
+    case 'station': return project.station || ''
+    case 'period': return `${formatDate(project.beginDate)} ～ ${formatDate(project.endDate)}`
+    case 'representativeSalesName': return project.representativeSalesName || ''
+    case 'registeredAt': return project.registeredAt
+    case 'updatedAt': return project.updatedAt
+    case 'registeredBy': return project.registeredBy
+    case 'updatedBy': return project.updatedBy
+    default: return ''
+  }
+}
+
+const compareValues = (left: string, right: string) => left.localeCompare(right, 'ja', {
+  numeric: true,
+  sensitivity: 'base'
+})
+
+const visibleProjects = computed(() => {
+  const activeFilters = Object.entries(columnFilters).filter(([, value]) => value)
+  return [...projects.value]
+    .filter((project) => activeFilters.every(([column, value]) =>
+      projectColumnValue(project, column).toLowerCase().includes(value.toLowerCase())
+    ))
+    .sort((left, right) => {
+      const result = compareValues(projectColumnValue(left, sortKey.value), projectColumnValue(right, sortKey.value))
+      return sortDirection.value === 'asc' ? result : -result
+    })
+})
+
+const sortBy = (column: string) => {
+  if (sortKey.value === column) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+    return
+  }
+  sortKey.value = column
+  sortDirection.value = 'asc'
+}
+
+const filterBy = (column: string, value: string) => {
+  columnFilters[column] = value
+}
 
 const fetchCustomers = async () => {
   const { data } = await $api.get<CustomerListResponse>('/customers', {
@@ -166,21 +216,21 @@ onMounted(async () => {
       <v-table fixed-header height="calc(100vh - 360px)">
         <thead>
           <tr>
-            <th>案件名</th>
-            <th>取引先</th>
-            <th>概要</th>
-            <th>要員</th>
-            <th>最寄駅</th>
-            <th>期間</th>
-            <th>担当営業</th>
-            <th>登録日時</th>
-            <th>更新日時</th>
-            <th>登録者</th>
-            <th>更新者</th>
+            <th><ListHeaderCell column="projectName" filterable label="案件名" :filter-value="columnFilters.projectName" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="customerName" filterable label="取引先" :filter-value="columnFilters.customerName" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="projectOverview" filterable label="概要" :filter-value="columnFilters.projectOverview" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="assignedPersonnelCount" label="要員" :filterable="false" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="station" filterable label="最寄駅" :filter-value="columnFilters.station" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="period" label="期間" :filterable="false" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="representativeSalesName" filterable label="担当営業" :filter-value="columnFilters.representativeSalesName" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="registeredAt" label="登録日時" :filterable="false" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="updatedAt" label="更新日時" :filterable="false" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="registeredBy" filterable label="登録者" :filter-value="columnFilters.registeredBy" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
+            <th><ListHeaderCell column="updatedBy" filterable label="更新者" :filter-value="columnFilters.updatedBy" :sort-direction="sortDirection" :sort-key="sortKey" @filter="filterBy" @sort="sortBy" /></th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="project in projects" :key="project.id">
+          <tr v-for="project in visibleProjects" :key="project.id">
             <td class="font-weight-medium">
               <NuxtLink class="management-link" :to="`/projects/${project.id}`">{{ project.projectName }}</NuxtLink>
             </td>
@@ -205,7 +255,7 @@ onMounted(async () => {
             <td>{{ project.registeredBy }}</td>
             <td>{{ project.updatedBy }}</td>
           </tr>
-          <tr v-if="!loading && projects.length === 0">
+          <tr v-if="!loading && visibleProjects.length === 0">
             <td class="text-center text-medium-emphasis py-10" colspan="11">案件情報がありません。</td>
           </tr>
         </tbody>

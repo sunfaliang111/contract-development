@@ -1,16 +1,22 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Header, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common'
+import type { FastifyReply } from 'fastify'
 import { CurrentUser } from '../auth/current-user.decorator'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { JwtPayload } from '../auth/types/jwt-payload.type'
 import { CreatePersonnelDto } from './dto/create-personnel.dto'
+import { CreateResumeDto } from './dto/create-resume.dto'
 import { UpdatePersonnelDto } from './dto/update-personnel.dto'
 import { PersonnelService } from './personnel.service'
+import { ResumesService } from './resumes.service'
 import { PersonnelSearchField } from './types/personnel-search-field.type'
 
 @Controller('personnel')
 @UseGuards(JwtAuthGuard)
 export class PersonnelController {
-  constructor(private readonly personnelService: PersonnelService) {}
+  constructor(
+    private readonly personnelService: PersonnelService,
+    private readonly resumesService: ResumesService
+  ) {}
 
   @Get()
   findAll(
@@ -60,5 +66,51 @@ export class PersonnelController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.personnelService.remove(id)
+  }
+
+  @Get(':id/resumes')
+  findResumes(@Param('id') id: string) {
+    return this.resumesService.findAll(id)
+  }
+
+  @Post(':id/resumes')
+  createResume(@Param('id') id: string, @Body() createResumeDto: CreateResumeDto) {
+    return this.resumesService.create(id, createResumeDto)
+  }
+
+  @Get(':id/resumes/:resumeId/preview')
+  @Header('Cache-Control', 'private, max-age=60')
+  async previewResume(
+    @Param('id') id: string,
+    @Param('resumeId') resumeId: string,
+    @Res() reply: FastifyReply
+  ) {
+    const file = await this.resumesService.getFile(id, resumeId)
+    reply.header('Content-Type', file.contentType)
+    reply.header('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(file.fileName)}`)
+    if (file.fileSize) {
+      reply.header('Content-Length', String(file.fileSize))
+    }
+    return reply.send(file.stream)
+  }
+
+  @Get(':id/resumes/:resumeId/download')
+  async downloadResume(
+    @Param('id') id: string,
+    @Param('resumeId') resumeId: string,
+    @Res() reply: FastifyReply
+  ) {
+    const file = await this.resumesService.getFile(id, resumeId)
+    reply.header('Content-Type', file.contentType)
+    reply.header('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(file.fileName)}`)
+    if (file.fileSize) {
+      reply.header('Content-Length', String(file.fileSize))
+    }
+    return reply.send(file.stream)
+  }
+
+  @Delete(':id/resumes/:resumeId')
+  removeResume(@Param('id') id: string, @Param('resumeId') resumeId: string) {
+    return this.resumesService.remove(id, resumeId)
   }
 }

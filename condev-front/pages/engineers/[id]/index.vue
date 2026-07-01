@@ -301,6 +301,8 @@ onMounted(async () => {
           <v-btn prepend-icon="mdi-close" variant="outlined" :disabled="saving" @click="cancelEdit">キャンセル</v-btn>
           <v-btn color="primary" prepend-icon="mdi-content-save" :loading="saving" @click="save">保存</v-btn>
         </div>
+        <v-divider class="my-6" />
+        <ResumeManager :personnel-id="detail.id" />
       </template>
     </v-card>
   </div>
